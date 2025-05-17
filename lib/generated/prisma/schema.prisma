@@ -1,0 +1,68 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String          @id @default(cuid())
+  email     String          @unique
+  password  String
+  createdAt DateTime        @default(now())
+  sites     MonitoredSite[] // all URLs
+}
+
+model MonitoredSite {
+  id        String   @id @default(cuid())
+  url       String
+  createdAt DateTime @default(now())
+
+  // Uptime Monitoring
+  interval   Int?
+  email1     String?
+  email2     String?
+  lastStatus Int?
+
+  // Owner
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations
+  logs     Log[]
+  sessions Session[]
+}
+
+model Log {
+  id        String        @id @default(cuid())
+  serviceId String
+  status    Int
+  timestamp DateTime      @default(now())
+  service   MonitoredSite @relation(fields: [serviceId], references: [id])
+}
+
+model Session {
+  id        String        @id @default(cuid())
+  siteId    String
+  site      MonitoredSite @relation(fields: [siteId], references: [id])
+  createdAt DateTime      @default(now())
+  events    Event[]
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  sessionId String
+  session   Session  @relation(fields: [sessionId], references: [id])
+  type      String
+  timestamp DateTime @default(now())
+  data      Json
+}
